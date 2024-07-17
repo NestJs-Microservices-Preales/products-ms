@@ -1,10 +1,5 @@
 import { PaginationDto } from './../common/dto/pagination.dto';
-import {
-  HttpStatus,
-  Injectable,
-  Logger,
-  OnModuleInit,
-} from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaClient } from '@prisma/client';
@@ -27,13 +22,13 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
 
   async findAll(paginationDto: PaginationDto) {
     const { page, limit } = paginationDto;
-    const totalPages = await this.product.count({ where : {available : true}});
+    const totalPages = await this.product.count({ where: { available: true } });
     const lastPage = Math.ceil(totalPages / limit);
 
     return {
       data: await this.product.findMany({
-        where : {
-          available : true
+        where: {
+          available: true,
         },
         skip: (page - 1) * limit,
         take: limit,
@@ -64,7 +59,7 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
-    const {id:__, ...data} = updateProductDto;
+    const { id: __, ...data } = updateProductDto;
     await this.findOne(id);
 
     return this.product.update({
@@ -81,5 +76,26 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
         available: false,
       },
     });
+  }
+
+  async validateProducts(ids: number[]) {
+    ids = Array.from(new Set(ids));
+
+    const products = await this.product.findMany({
+      where: {
+        id: {
+          in: ids,          
+        },
+      },
+    });
+
+    if (products.length !== ids.length) {
+      throw new RpcException({
+        message: 'Some products were not found',
+        status: HttpStatus.BAD_REQUEST,
+      });
+    }
+
+    return products;
   }
 }
